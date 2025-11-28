@@ -1,0 +1,252 @@
+
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Digital Animatronic Eyeball</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 20px;
+            font-family: Arial, sans-serif;
+            background: #1a1a1a;
+            color: white;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-height: 100vh;
+        }
+        h1 {
+            text-align: center;
+            margin-bottom: 30px;
+            font-size: 2.5em;
+        }
+        .eyeballs-container {
+            display: flex;
+            gap: 60px;
+            justify-content: center;
+            margin-bottom: 30px;
+        }
+        .eyeball-wrapper {
+            position: relative;
+        }
+        .eyeball-canvas {
+            border-radius: 50%;
+            background: white;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+        }
+        .info {
+            text-align: center;
+            padding: 15px;
+            background: #2a2a2a;
+            border-radius: 10px;
+            font-family: monospace;
+            font-size: 14px;
+            max-width: 400px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.3);
+        }
+        .info-row {
+            margin: 8px 0;
+            display: flex;
+            justify-content: space-between;
+            padding: 5px 10px;
+        }
+        .label {
+            color: #888;
+        }
+        .value {
+            color: #4CAF50;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+    <h1>👀 Digital Animatronic Eyes</h1>
+    
+    <div class="eyeballs-container">
+        <div class="eyeball-wrapper">
+            <canvas id="left-eyeball" class="eyeball-canvas" width="400" height="400"></canvas>
+        </div>
+        <div class="eyeball-wrapper">
+            <canvas id="right-eyeball" class="eyeball-canvas" width="400" height="400"></canvas>
+        </div>
+    </div>
+    
+    <div class="info">
+        <div class="info-row">
+            <span class="label">Horizontal:</span>
+            <span class="value" id="dx">0.000</span>
+        </div>
+        <div class="info-row">
+            <span class="label">Vertical:</span>
+            <span class="value" id="dy">0.000</span>
+        </div>
+        <div class="info-row">
+            <span class="label">Render FPS:</span>
+            <span class="value" id="fps">0</span>
+        </div>
+    </div>
+    
+    <script>
+        const leftCanvas = document.getElementById('left-eyeball');
+        const rightCanvas = document.getElementById('right-eyeball');
+        const leftCtx = leftCanvas.getContext('2d');
+        const rightCtx = rightCanvas.getContext('2d');
+        
+        const eyeballSize = 400;
+        const scleraRadius = 160;
+        const pupilRadius = 50;
+        const irisRadius = 75;
+        const maxPupilOffset = 65;
+        
+        // Client-side smoothing variables
+        let targetDx = 0, targetDy = 0;
+        let currentLeftDx = 0, currentLeftDy = 0;
+        let currentRightDx = 0, currentRightDy = 0;
+        const clientSmoothness = 0.18;  // Higher = faster response
+        
+        // FPS counter
+        let lastTime = performance.now();
+        let frameCount = 0;
+        
+        function drawEyeball(ctx, dx, dy, isLeft) {
+            // Subtle parallax effect
+            const parallaxFactor = isLeft ? -0.08 : 0.08;
+            const adjustedDx = dx + parallaxFactor;
+            
+            // Clear canvas
+            ctx.clearRect(0, 0, eyeballSize, eyeballSize);
+            
+            const centerX = eyeballSize / 2;
+            const centerY = eyeballSize / 2;
+            
+            // Draw sclera with subtle gradient
+            const scleraGradient = ctx.createRadialGradient(
+                centerX, centerY - 20, 0,
+                centerX, centerY, scleraRadius
+            );
+            scleraGradient.addColorStop(0, '#ffffff');
+            scleraGradient.addColorStop(0.7, '#fafafa');
+            scleraGradient.addColorStop(1, '#efefef');
+            
+            ctx.fillStyle = scleraGradient;
+            ctx.beginPath();
+            ctx.arc(centerX, centerY, scleraRadius, 0, 2 * Math.PI);
+            ctx.fill();
+            
+            // Subtle sclera border
+            ctx.strokeStyle = '#d5d5d5';
+            ctx.lineWidth = 2;
+            ctx.stroke();
+            
+            // Calculate pupil position
+            let pupilX = centerX + adjustedDx * maxPupilOffset;
+            let pupilY = centerY + dy * maxPupilOffset;
+            
+            // Keep pupil within bounds
+            const distFromCenter = Math.sqrt(
+                Math.pow(pupilX - centerX, 2) + Math.pow(pupilY - centerY, 2)
+            );
+            const maxDist = scleraRadius - irisRadius;
+            
+            if (distFromCenter > maxDist) {
+                const scale = maxDist / distFromCenter;
+                pupilX = centerX + (pupilX - centerX) * scale;
+                pupilY = centerY + (pupilY - centerY) * scale;
+            }
+            
+            // Draw iris with detailed gradient
+            const irisGradient = ctx.createRadialGradient(
+                pupilX, pupilY, pupilRadius,
+                pupilX, pupilY, irisRadius
+            );
+            irisGradient.addColorStop(0, '#0d3d66');
+            irisGradient.addColorStop(0.3, '#1a5490');
+            irisGradient.addColorStop(0.7, '#2a78c8');
+            irisGradient.addColorStop(1, '#1a5490');
+            
+            ctx.fillStyle = irisGradient;
+            ctx.beginPath();
+            ctx.arc(pupilX, pupilY, irisRadius, 0, 2 * Math.PI);
+            ctx.fill();
+            
+            // Draw pupil with slight gradient
+            const pupilGradient = ctx.createRadialGradient(
+                pupilX, pupilY, 0,
+                pupilX, pupilY, pupilRadius
+            );
+            pupilGradient.addColorStop(0, '#000000');
+            pupilGradient.addColorStop(1, '#1a1a1a');
+            
+            ctx.fillStyle = pupilGradient;
+            ctx.beginPath();
+            ctx.arc(pupilX, pupilY, pupilRadius, 0, 2 * Math.PI);
+            ctx.fill();
+            
+            // Main highlight
+            ctx.fillStyle = 'rgba(255, 255, 255, 0.9)';
+            ctx.beginPath();
+            ctx.arc(pupilX - 20, pupilY - 20, 18, 0, 2 * Math.PI);
+            ctx.fill();
+            
+            // Secondary highlight
+            ctx.fillStyle = 'rgba(255, 255, 255, 0.5)';
+            ctx.beginPath();
+            ctx.arc(pupilX + 15, pupilY + 18, 10, 0, 2 * Math.PI);
+            ctx.fill();
+            
+            // Tertiary tiny highlight
+            ctx.fillStyle = 'rgba(255, 255, 255, 0.3)';
+            ctx.beginPath();
+            ctx.arc(pupilX - 8, pupilY + 25, 5, 0, 2 * Math.PI);
+            ctx.fill();
+        }
+        
+        function animate() {
+            // Ultra-smooth interpolation for each eye separately
+            currentLeftDx += (targetDx - currentLeftDx) * clientSmoothness;
+            currentLeftDy += (targetDy - currentLeftDy) * clientSmoothness;
+            
+            currentRightDx += (targetDx - currentRightDx) * clientSmoothness;
+            currentRightDy += (targetDy - currentRightDy) * clientSmoothness;
+            
+            // Draw both eyeballs
+            drawEyeball(leftCtx, currentLeftDx, currentLeftDy, true);
+            drawEyeball(rightCtx, currentRightDx, currentRightDy, false);
+            
+            // Update FPS
+            frameCount++;
+            const now = performance.now();
+            if (now - lastTime >= 1000) {
+                document.getElementById('fps').textContent = frameCount;
+                frameCount = 0;
+                lastTime = now;
+            }
+            
+            requestAnimationFrame(animate);
+        }
+        
+        function updateDirection() {
+            fetch('/direction')
+                .then(response => response.json())
+                .then(data => {
+                    targetDx = data.dx;
+                    targetDy = data.dy;
+                    
+                    document.getElementById('dx').textContent = data.dx.toFixed(3);
+                    document.getElementById('dy').textContent = data.dy.toFixed(3);
+                })
+                .catch(err => console.error('Error:', err));
+        }
+        
+        // Fetch direction at 60Hz for low latency
+        setInterval(updateDirection, 16);
+        
+        // Start animation loop at 60fps
+        requestAnimationFrame(animate);
+        
+        // Initial draw
+        drawEyeball(leftCtx, 0, 0, true);
+        drawEyeball(rightCtx, 0, 0, false);
+    </script>
+</body>
+</html>
