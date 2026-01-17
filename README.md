@@ -1,7 +1,7 @@
 
 ---
 
-````markdown
+````
 ## Animatronic Eyes – Real-Time Eye Tracking Prototype 👀
 
 A small computer vision project where animatronic-style eyes follow the viewer in real time by detecting eye position from a camera feed.
@@ -21,7 +21,7 @@ This is a **rapid 20-minute prototype** built to explore real-time feedback loop
 
 ## Project structure
 
-```text
+```
 .
 ├── src/
 │   └── eyeball_tracker.py     # core eye-tracking logic
